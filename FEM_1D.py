@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from scipy.constants import epsilon_0
 
 # np.set_printoptions(suppress=True)
@@ -65,7 +66,7 @@ class FEM_1D():
         self.__applyBoundaryCondition()
         self.__calculateVs()
         
-        return self.sol
+        return np.copy(self.sol)
 
     def __calculateLengthElements(self):
         '''
@@ -173,12 +174,56 @@ class FEM_1D():
         Vs = np.linalg.solve(self.K, self.b)
         self.sol = Vs
 
+    def calculateCapacitance(self):
+        E = (self.sol[0] - self.sol[1])/self.l1
+        sigma = -E*self.e1
+        A = self.L*self.L
+        Q = sigma * A
+        C = Q/self.V0
+
+        return C
+
+def showPlot(d1, d2, N1, N2, V0, vs):
+    x1 = np.linspace(0, d1, N1+1)
+    x2 = np.linspace(d1, d1 + d2, N2+1)
+    x = np.unique(np.concatenate((x1, x2)))
+    
+    y = np.copy(vs)
+    y = np.concatenate((np.array([0]),y ,np.array([V0])))
+
+    # print (y)
+    # print (x)
+    print(x)
+    plt.plot(x, y, 'o')
+    plt.show()
+
+def showSol(sol, N, V0):
+    vs = np.concatenate((np.array([0]),sol ,np.array([V0])))
+    
+    col_indx = []
+    print('-------------------------------')
+    print('Valores de potencial entre as placas:')
+    for i in range(N+1):
+        print(f'v{i+1} = {vs[i]}')
+        
+
 
 def main():
-    model = FEM_1D(L=0.02, d1=0.001, d2=0.001, er1=2, er2=4, N1=2, N2=2, V0=1)
+    L=0.02 
+    d1=0.001
+    d2=0.001
+    er1=2
+    er2=4
+    N1=100
+    N2=100
+    V0=1
+    model = FEM_1D(L, d1, d2, er1, er2, N1, N2, V0)
     sol = model.solve()
-    
-    print(sol)
-    
+
+    showSol(sol, N1+N2, V0)
+    # showPlot(d1, d2, N1, N2, V0, sol)
+    C = model.calculateCapacitance()
+    print(C)
+
 if __name__ == '__main__':
     main()
