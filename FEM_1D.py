@@ -56,6 +56,11 @@ class FEM_1D():
         self.sol = None
 
     def solve(self):
+        '''
+            Método para realizar a solução do problema, faz a chamada de várias funções para o cálculo
+            de um elemento específico para realizar a solução
+            No final, retorna um vetor com os potenciais nos nós.
+        '''
         self.__calculateLengthElements()
         self.__calculateKi()
         self.__calculatefi()
@@ -147,14 +152,16 @@ class FEM_1D():
         '''
         b = np.copy(self.f)
         # Aplicando condição de contorno 1) V1(0) = 0
+        # movendo a coluna para o outro lado do sistema
         c_v1 = self.K[:, 0]
         b += -c_v1 * 0
 
         # Aplicando condição de contorno 2) V2(0) = 0
+        # movendo a coluna para o outro lado do sistema 
         c_vN_plus_1 = self.K[:, self.N]
         b += -c_vN_plus_1 * self.V0
 
-        # removendo a primeira e última linha e a primeira e última coluna da matriz K
+        # removendo a primeira e última linha e a primeira e última coluna da matriz K e da matriz b
         self.K = self.K[1:self.N, 1:self.N]
         b = b[1: self.N]
         self.b = b
@@ -170,11 +177,18 @@ class FEM_1D():
     def __calculateVs(self):
         '''
             Solução do sistema linear da forma KV = b
+                                        sendo b = f+d
         '''
         Vs = np.linalg.solve(self.K, self.b)
+        # concatenando os potenciais de z = 0 e de z = d1+d2
+        Vs = np.concatenate((np.array([0]),Vs ,np.array([self.V0])))
+
         self.sol = Vs
 
     def calculateCapacitance(self):
+        '''
+            Calcula a capacitância do capacitor do problema
+        '''
         E = (self.sol[0] - self.sol[1])/self.l1
         sigma = -E*self.e1
         A = self.L*self.L
@@ -183,22 +197,26 @@ class FEM_1D():
 
         return C
 
-def showPlot(d1, d2, N1, N2, V0, vs):
+def plotSol(d1, d2, N1, N2, V0, vs):
+    '''
+       Função para plotar a solução dos potenciais obtidas em função de z.
+    '''
     x1 = np.linspace(0, d1, N1+1)
     x2 = np.linspace(d1, d1 + d2, N2+1)
     x = np.unique(np.concatenate((x1, x2)))
     
     y = np.copy(vs)
-    y = np.concatenate((np.array([0]),y ,np.array([V0])))
 
-    # print (y)
-    # print (x)
-    print(x)
     plt.plot(x, y, 'o')
+    plt.xlabel("z")
+    plt.ylabel("V")
     plt.show()
 
 def showSol(sol, N, V0):
-    vs = np.concatenate((np.array([0]),sol ,np.array([V0])))
+    '''
+        Função para printar no terminal os valores de V obtidos nos pontos.
+    '''
+    vs = sol
     
     col_indx = []
     print('-------------------------------')
@@ -206,7 +224,14 @@ def showSol(sol, N, V0):
     for i in range(N+1):
         print(f'v{i+1} = {vs[i]}')
         
-
+def showCap(Ns,Cs):
+    '''
+        Função para plotar o grafico da capacitância em função de N
+    '''
+    plt.plot(Ns, Cs)
+    plt.xlabel("N")
+    plt.ylabel("Capacitância")
+    plt.show()
 
 def main():
     L=0.02 
@@ -221,9 +246,19 @@ def main():
     sol = model.solve()
 
     showSol(sol, N1+N2, V0)
-    # showPlot(d1, d2, N1, N2, V0, sol)
-    C = model.calculateCapacitance()
-    print(C)
+    plotSol(d1, d2, N1, N2, V0, sol)
+
+    # Seleciono alguns valores de (N1, N2) para realizar o cálculo da capacitância 
+    # desses valores e assim realizar o plot dos resultados obtidos.
+    Ns = [(2, 2), (5, 5), (5, 10),(15,15), (50, 50)]
+    Cs = []
+    for n in Ns:
+        md = FEM_1D(L, d1, d2, er1, er2, n[0], n[1], V0)
+        md.solve()
+        Cs.append(md.calculateCapacitance())
+    
+    Ns = list(map(lambda x : x[0] + x[1], Ns))
+    showCap(Ns, Cs)
 
 if __name__ == '__main__':
     main()
