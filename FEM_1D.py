@@ -239,8 +239,8 @@ def main():
     d2=0.001
     er1=2
     er2=4
-    N1=100
-    N2=100
+    N1=50
+    N2=50
     V0=1
     model = FEM_1D(L, d1, d2, er1, er2, N1, N2, V0)
     sol = model.solve()
